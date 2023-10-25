@@ -3,29 +3,26 @@ package configs
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/jackc/pgx/v5"
 )
 
+var CONN *pgx.Conn
+
 const connectMsg string = "---------------------------------------------------------------------------------------------\nConnected to DB\n---------------------------------------------------------------------------------------------"
 
-func ConnectDB() error {
+func ConnectDB() *pgx.Conn {
 	ctx := context.Background()
 	uri := SQLURI()
 
-	//* Parsing the uri
-	config, err := pgx.ParseConfig(uri)
+	conn, err := pgx.Connect(ctx, uri)
 	if err != nil {
-		return err
+		log.Println(err)
+		return nil
 	}
-
-	conn, err := pgx.ConnectConfig(ctx, config)
-	if err != nil {
-		return err
-	}
-	defer conn.Close(ctx)
+	CONN = conn
 
 	fmt.Println(connectMsg)
-	return nil
-
+	return conn
 }

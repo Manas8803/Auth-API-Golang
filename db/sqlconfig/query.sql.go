@@ -9,29 +9,31 @@ import (
 	"context"
 )
 
+const checkUserExists = `-- name: CheckUserExists :one
+SELECT EXISTS (SELECT 1 FROM users WHERE email = $1) AS exists
+`
+
+func (q *Queries) CheckUserExists(ctx context.Context, email string) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserExists, email)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (
-  id, name, email, password
-) VALUES (
-  $1, $2, $3, $4
-)
+INSERT INTO users (name, email, password)
+VALUES ($1, $2, $3)
 RETURNING id, name, email, password
 `
 
 type CreateUserParams struct {
-	ID       int64
 	Name     string
 	Email    string
 	Password string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser,
-		arg.ID,
-		arg.Name,
-		arg.Email,
-		arg.Password,
-	)
+	row := q.db.QueryRow(ctx, createUser, arg.Name, arg.Email, arg.Password)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -44,11 +46,11 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 
 const getUser = `-- name: GetUser :one
 SELECT id, name, email, password FROM users
-WHERE id = $1 LIMIT 1
+WHERE email = $1 LIMIT 1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
-	row := q.db.QueryRow(ctx, getUser, id)
+func (q *Queries) GetUser(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUser, email)
 	var i User
 	err := row.Scan(
 		&i.ID,
