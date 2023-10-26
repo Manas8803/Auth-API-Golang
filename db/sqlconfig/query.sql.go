@@ -9,54 +9,69 @@ import (
 	"context"
 )
 
-const checkUserExists = `-- name: CheckUserExists :one
-SELECT EXISTS (SELECT 1 FROM users WHERE email = $1) AS exists
-`
-
-func (q *Queries) CheckUserExists(ctx context.Context, email string) (bool, error) {
-	row := q.db.QueryRow(ctx, checkUserExists, email)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
-}
-
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (name, email, password)
-VALUES ($1, $2, $3)
-RETURNING id, name, email, password
+INSERT INTO users (name, email, password, isverified, otp)
+VALUES ($1, $2, $3, false, $4)
+RETURNING id, name, email, password, isverified, otp
 `
 
 type CreateUserParams struct {
 	Name     string
 	Email    string
 	Password string
+	Otp      string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.Name, arg.Email, arg.Password)
+	row := q.db.QueryRow(ctx, createUser,
+		arg.Name,
+		arg.Email,
+		arg.Password,
+		arg.Otp,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
 		&i.Password,
+		&i.Isverified,
+		&i.Otp,
 	)
 	return i, err
 }
 
-const getUser = `-- name: GetUser :one
-SELECT id, name, email, password FROM users
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, name, email, password, isverified, otp FROM users
 WHERE email = $1 LIMIT 1
 `
 
-func (q *Queries) GetUser(ctx context.Context, email string) (User, error) {
-	row := q.db.QueryRow(ctx, getUser, email)
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
 		&i.Password,
+		&i.Isverified,
+		&i.Otp,
 	)
 	return i, err
+}
+
+const updateUserByOTP = `-- name: UpdateUserByOTP :exec
+UPDATE users
+SET isverified = TRUE
+WHERE email = $1 AND otp = $2
+`
+
+type UpdateUserByOTPParams struct {
+	Email string
+	Otp   string
+}
+
+func (q *Queries) UpdateUserByOTP(ctx context.Context, arg UpdateUserByOTPParams) error {
+	_, err := q.db.Exec(ctx, updateUserByOTP, arg.Email, arg.Otp)
+	return err
 }
