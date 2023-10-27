@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"Gin/Basics/controller"
+	controller "Gin/Basics/controllers"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,4 +9,6 @@ import (
 func UserRoute(router *gin.Engine) {
 	router.POST("/auth/login", controller.Login)
 	router.POST("/auth/register", controller.Register)
+	router.POST("/auth/otp", controller.ValidateOTP)
 }
+

@@ -2,10 +2,10 @@
 SELECT * FROM users
 WHERE email = $1 LIMIT 1;
 
--- name: UpdateUserByOTP :exec
+-- name: UpdateUser :exec
 UPDATE users
 SET isverified = TRUE
-WHERE email = $1 AND otp = $2;
+WHERE email = $1;
 
 -- name: CreateUser :one
 INSERT INTO users (name, email, password, isverified, otp)

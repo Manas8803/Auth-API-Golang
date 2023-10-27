@@ -60,18 +60,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	return i, err
 }
 
-const updateUserByOTP = `-- name: UpdateUserByOTP :exec
+const updateUser = `-- name: UpdateUser :exec
 UPDATE users
 SET isverified = TRUE
-WHERE email = $1 AND otp = $2
+WHERE email = $1
 `
 
-type UpdateUserByOTPParams struct {
-	Email string
-	Otp   string
-}
-
-func (q *Queries) UpdateUserByOTP(ctx context.Context, arg UpdateUserByOTPParams) error {
-	_, err := q.db.Exec(ctx, updateUserByOTP, arg.Email, arg.Otp)
+func (q *Queries) UpdateUser(ctx context.Context, email string) error {
+	_, err := q.db.Exec(ctx, updateUser, email)
 	return err
 }
