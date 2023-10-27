@@ -8,6 +8,7 @@ import (
 	"Gin/Basics/responses"
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -109,12 +110,6 @@ func Register(r *gin.Context) {
 	}
 
 	//* Sending OTP
-	go func() {
-		if sendEmailErr := model.SendOTP(user.Email, user.OTP); sendEmailErr != nil {
-			respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
-			return
-		}
-	}()
 
 	_, insertDBErr := queries.CreateUser(ctx, db.CreateUserParams{
 		Name:     user.Name,
@@ -125,7 +120,7 @@ func Register(r *gin.Context) {
 
 	//* Checking for errors while inserting in the DB
 	if insertDBErr != nil {
-
+		log.Println(insertDBErr)
 		if strings.HasPrefix(insertDBErr.Error(), "ERROR: duplicate key") {
 			respondWithError(r, http.StatusConflict, "User already exists")
 			return
@@ -137,6 +132,10 @@ func Register(r *gin.Context) {
 		respondWithError(r, http.StatusInternalServerError, "Error in inserting the document")
 		return
 	}
+
+	go func() {
+		sendOtp(r, user)
+	}()
 
 	r.JSON(http.StatusCreated, responses.UserResponse{Status: http.StatusCreated, Message: "OTP has been sent to your email"})
 }
@@ -202,4 +201,12 @@ func respondWithError(ctx *gin.Context, statusCode int, message string) {
 		Status:  statusCode,
 		Message: message,
 	})
+}
+
+func sendOtp(r *gin.Context, user model.User) {
+
+	if sendEmailErr := model.SendOTP(user.Email, user.OTP); sendEmailErr != nil {
+		respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
 }
