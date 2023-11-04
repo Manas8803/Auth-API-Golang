@@ -2,6 +2,7 @@ package auth
 
 import (
 	"Gin/Basics/configs"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -9,16 +10,19 @@ import (
 
 var Key = []byte(configs.JWT_SECRET())
 
-func GenerateJWT(email string) (tokenStr string, err error) {
-	token := jwt.New(jwt.SigningMethodHS256)
-	claims := token.Claims.(jwt.MapClaims)
-	claims["exp"] = time.Now().Add(30 * time.Minute).Unix()
-	claims["authorized"] = true
-	claims["user"] = "username"
+func GenerateJWT() (tokenStr string, err error) {
+	claims := jwt.MapClaims{
+		"exp":        time.Now().Add(30 * time.Minute).Unix(),
+		"authorized": true,
+		"user":       "username",
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	tokenStr, err = token.SignedString(Key)
 
 	return tokenStr, err
+
 }
 
 func ValidateJWT(tokenStr string) (jwt.MapClaims, error) {
@@ -35,4 +39,27 @@ func ValidateJWT(tokenStr string) (jwt.MapClaims, error) {
 	} else {
 		return nil, err
 	}
+}
+
+func GetExpirationTimeFromToken(tokenStr string) {
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		return []byte(Key), nil
+	})
+
+	if err != nil {
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return
+	}
+
+	exp, ok := claims["exp"].(float64)
+	if !ok {
+		return
+	}
+
+	expirationTime := time.Unix(int64(exp), 0)
+	fmt.Println(expirationTime)
 }

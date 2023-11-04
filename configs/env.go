@@ -42,6 +42,7 @@ func EMAIL() string {
 
 	return os.Getenv("EMAIL")
 }
+
 func PASSWORD() string {
 	err := godotenv.Load()
 	if err != nil {

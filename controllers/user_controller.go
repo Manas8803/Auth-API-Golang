@@ -67,7 +67,7 @@ func Login(r *gin.Context) {
 
 	//* Generating Token
 	var token string
-	token, err = auth.GenerateJWT(user.Email)
+	token, err = auth.GenerateJWT()
 	if err != nil {
 		respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
 		return
@@ -77,7 +77,7 @@ func Login(r *gin.Context) {
 }
 
 func Register(r *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	var user model.User
 	defer cancel()
 	var queries *db.Queries
@@ -134,15 +134,17 @@ func Register(r *gin.Context) {
 	}
 
 	go func() {
-		sendOtp(r, user)
+		if sendEmailErr := model.SendOTP(user.Email, user.OTP); sendEmailErr != nil {
+			respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
 	}()
 
 	r.JSON(http.StatusCreated, responses.UserResponse{Status: http.StatusCreated, Message: "OTP has been sent to your email"})
 }
 
 func ValidateOTP(r *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 	var req model.OTP
 	//* Checking for invalid json format
 	if err := r.BindJSON(&req); err != nil {
@@ -161,6 +163,7 @@ func ValidateOTP(r *gin.Context) {
 	//* Checking whether user exists or not
 	user, getUserErr := queries.GetUserByEmail(ctx, req.Email)
 	if getUserErr != nil {
+		fmt.Println(getUserErr)
 		respondWithError(r, http.StatusBadRequest, "User does not exist. Please register to generate OTP.")
 		return
 	}
@@ -178,22 +181,24 @@ func ValidateOTP(r *gin.Context) {
 	}
 
 	//* Updating user to be verified
-	updateUserErr := queries.UpdateUser(ctx, req.Email)
-	if updateUserErr != nil {
-		fmt.Println(updateUserErr)
-		respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
+	var updateUserErr error
+	go func() {
+		updateUserErr = queries.UpdateUser(ctx, req.Email)
+		if updateUserErr != nil {
+			fmt.Println(updateUserErr)
+			respondWithError(r, http.StatusInternalServerError, "Internal Server Error123")
+			return
+		}
+	}()
 
 	//* Generating Token
-	token, tokenErr := auth.GenerateJWT(req.Email)
+	token, tokenErr := auth.GenerateJWT()
 	if tokenErr != nil {
 		respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 
 	r.JSON(http.StatusAccepted, responses.UserResponse{Status: http.StatusAccepted, Message: "success", Data: map[string]interface{}{"token": token}})
-
 }
 
 func respondWithError(ctx *gin.Context, statusCode int, message string) {
@@ -201,12 +206,4 @@ func respondWithError(ctx *gin.Context, statusCode int, message string) {
 		Status:  statusCode,
 		Message: message,
 	})
-}
-
-func sendOtp(r *gin.Context, user model.User) {
-
-	if sendEmailErr := model.SendOTP(user.Email, user.OTP); sendEmailErr != nil {
-		respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
 }
