@@ -3,6 +3,7 @@ package auth
 import (
 	"Gin/Basics/configs"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -11,8 +12,12 @@ import (
 var Key = []byte(configs.JWT_SECRET())
 
 func GenerateJWT() (tokenStr string, err error) {
+	expirationTime, err := strconv.ParseInt(configs.JWT_LIFETIME(), 10, 64)
+	if err != nil {
+		return "", err
+	}
 	claims := jwt.MapClaims{
-		"exp":        time.Now().Add(30 * time.Minute).Unix(),
+		"exp":        time.Now().Add(time.Duration(expirationTime)*time.Hour).Unix(),
 		"authorized": true,
 		"user":       "username",
 	}
