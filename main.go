@@ -18,10 +18,10 @@ import (
 
 func main() {
 
-	// prod := configs.RELEASE_MODE()
-	// if prod == "true" {
-	// 	gin.SetMode(gin.ReleaseMode)
-	// }
+	prod := configs.RELEASE_MODE()
+	if prod == "true" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	router := gin.Default()
 	docs.SwaggerInfo.BasePath = "/api/v1"
 
