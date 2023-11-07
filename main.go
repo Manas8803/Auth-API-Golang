@@ -20,8 +20,8 @@ func main() {
 	router := gin.Default()
 	docs.SwaggerInfo.BasePath = "/api/v1"
 
-	//* Passing the router to all user(auth) routes.
 	api := router.Group("/api/v1")
+	//* Passing the router to all user(auth) routes.
 	routes.UserRoute(api)
 
 	//* Connecting to DB
