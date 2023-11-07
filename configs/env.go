@@ -51,3 +51,12 @@ func PASSWORD() string {
 
 	return os.Getenv("PASSWORD")
 }
+
+func RELEASE_MODE() string {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	return os.Getenv("RELEASE_MODE")
+}
