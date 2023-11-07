@@ -9,6 +9,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type UserResponse struct {
+	Status  int                    `json:"status"`
+	Message string                 `json:"message"`
+	Data    map[string]interface{} `json:"data,omitempty"`
+}
+
 type User struct {
 	Name     string `json:"name" validate:"required"`
 	Email    string `json:"email" validate:"required"`
@@ -19,6 +25,11 @@ type User struct {
 type OTP struct {
 	Email string `json:"email" validate:"required"`
 	OTP   string `json:"otp" validate:"required"`
+}
+type Register struct {
+	Name     string `json:"name" validate:"required"`
+	Email    string `json:"email" validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 type Login struct {

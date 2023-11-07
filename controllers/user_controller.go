@@ -19,6 +19,22 @@ import (
 
 var validate = validator.New()
 
+// ^ Login :
+//
+//	@Summary		Login route
+//	@Description	Allows users to login into their account.
+//	@Tags			user
+//	@Accept			json
+//	@Produce		json
+//	@Param			Body	body		model.Login					true	"User's email and password"
+//	@Success		200		{object}	responses.UserResponse_doc	"Successful response"
+//	@Failure		400		{object}	responses.ErrorResponse_doc	"Invalid JSON data"
+//	@Failure		400		{object}	responses.ErrorResponse_doc	"Please provide with sufficient credentials"
+//	@Failure		401		{object}	responses.ErrorResponse_doc	"Invalid Credentials"
+//	@Failure		404		{object}	responses.ErrorResponse_doc	"User is not registered"
+//	@Failure		422		{object}	responses.ErrorResponse_doc	"Email already registered, please verify your email address"
+//	@Failure		500		{object}	responses.ErrorResponse_doc	"Internal server error"
+//	@Router			/auth/login [post]
 func Login(r *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -54,7 +70,7 @@ func Login(r *gin.Context) {
 		go func() {
 			model.SendOTP(user.Email, user.Otp)
 		}()
-		respondWithError(r, http.StatusUnprocessableEntity, "Email already registered. Please verify your rmail address using the OTP sent to your registered email.")
+		respondWithError(r, http.StatusUnprocessableEntity, "Email is already registered. Please verify your email address using the OTP sent to your registered email.")
 		return
 	}
 
@@ -73,9 +89,24 @@ func Login(r *gin.Context) {
 		return
 	}
 
-	r.JSON(http.StatusCreated, responses.UserResponse{Status: http.StatusAccepted, Message: "success", Data: map[string]interface{}{"token": token}})
+	r.JSON(http.StatusOK, responses.UserResponse{Message: "success", Data: map[string]interface{}{"token": token}})
 }
 
+// ^ Register :
+//
+//	@Summary		Register route
+//	@Description	Allows users to create a new account.
+//	@Tags			user
+//	@Accept			json
+//	@Produce		json
+//	@Param			user	body		model.Register				true	"User name, email, password"
+//	@Success		201		{object}	responses.UserResponse_doc	"Successful response"
+//	@Failure		400		{object}	responses.ErrorResponse_doc	"Invalid JSON data, Invalid Email"
+//	@Failure		401		{object}	responses.ErrorResponse_doc	"Invalid Credentials"
+//	@Failure		409		{object}	responses.ErrorResponse_doc	"User already exists"
+//	@Failure		422		{object}	responses.ErrorResponse_doc	"Please provide with sufficient credentials"
+//	@Failure		500		{object}	responses.ErrorResponse_doc	"Internal Server Error, Error in inserting the document"
+//	@Router			/auth/register [post]
 func Register(r *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	var user model.User
@@ -93,7 +124,7 @@ func Register(r *gin.Context) {
 
 	//* Validating if all the fields are present
 	if validationErr := validate.Struct(&user); validationErr != nil {
-		respondWithError(r, http.StatusBadRequest, "Please provide with sufficient credentials")
+		respondWithError(r, http.StatusUnprocessableEntity, "Please provide with sufficient credentials")
 		return
 	}
 
@@ -140,9 +171,23 @@ func Register(r *gin.Context) {
 		}
 	}()
 
-	r.JSON(http.StatusCreated, responses.UserResponse{Status: http.StatusCreated, Message: "OTP has been sent to your email"})
+	r.JSON(http.StatusCreated, responses.UserResponse{Message: "OTP has been sent to your email"})
 }
 
+// ^ Validation :
+//
+//	@Summary		Validation route
+//	@Description	Allows users to validate OTP and complete the registration process.
+//	@Tags			user
+//	@Accept			json
+//	@Produce		json
+//	@Param			Body	body		model.OTP					true	"User's email address and otp"
+//	@Success		200		{object}	responses.UserResponse_doc	"Successful response, User already verified. Please login."
+//	@Failure		400		{object}	responses.ErrorResponse_doc	"Invalid JSON data, Invalid Email, User does not exist. Please register to generate OTP."
+//	@Failure		401		{object}	responses.ErrorResponse_doc	"Invalid OTP"
+//	@Failure		422		{object}	responses.ErrorResponse_doc	"Please provide with sufficient credentials"
+//	@Failure		500		{object}	responses.ErrorResponse_doc	"Internal Server Error"
+//	@Router			/auth/otp [post]
 func ValidateOTP(r *gin.Context) {
 	ctx := context.Background()
 	var req model.OTP
@@ -186,7 +231,7 @@ func ValidateOTP(r *gin.Context) {
 		updateUserErr = queries.UpdateUser(ctx, req.Email)
 		if updateUserErr != nil {
 			fmt.Println(updateUserErr)
-			respondWithError(r, http.StatusInternalServerError, "Internal Server Error123")
+			respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
 	}()
@@ -198,12 +243,11 @@ func ValidateOTP(r *gin.Context) {
 		return
 	}
 
-	r.JSON(http.StatusAccepted, responses.UserResponse{Status: http.StatusAccepted, Message: "success", Data: map[string]interface{}{"token": token}})
+	r.JSON(http.StatusOK, responses.UserResponse{Message: "success", Data: map[string]interface{}{"token": token}})
 }
 
 func respondWithError(ctx *gin.Context, statusCode int, message string) {
 	ctx.JSON(statusCode, responses.UserResponse{
-		Status:  statusCode,
 		Message: message,
 	})
 }
