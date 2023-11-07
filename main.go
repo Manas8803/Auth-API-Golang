@@ -28,5 +28,5 @@ func main() {
 	configs.ConnectDB()
 
 	router.GET("/api/v1/docs/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
-	router.Run("localhost:8000")
+	router.Run("localhost:8080")
 }
