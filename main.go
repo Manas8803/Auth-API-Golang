@@ -33,5 +33,5 @@ func main() {
 	configs.ConnectDB()
 
 	router.GET("/api/v1/docs/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
-	router.Run("localhost:10000")
+	router.Run("localhost:"+configs.PORT())
 }
