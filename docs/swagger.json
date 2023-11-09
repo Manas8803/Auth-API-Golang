@@ -104,13 +104,19 @@
                         }
                     },
                     "400": {
-                        "description": "Invalid JSON data, Invalid Email, User does not exist. Please register to generate OTP.",
+                        "description": "Invalid JSON data, Invalid Email",
                         "schema": {
                             "$ref": "#/definitions/responses.ErrorResponse_doc"
                         }
                     },
                     "401": {
                         "description": "Invalid OTP",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ErrorResponse_doc"
+                        }
+                    },
+                    "404": {
+                        "description": "User does not exist. Please register to generate OTP.",
                         "schema": {
                             "$ref": "#/definitions/responses.ErrorResponse_doc"
                         }

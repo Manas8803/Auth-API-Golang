@@ -7,7 +7,6 @@ import (
 	model "Gin/Basics/models"
 	"Gin/Basics/responses"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -140,8 +139,7 @@ func Register(r *gin.Context) {
 		return
 	}
 
-	//* Sending OTP
-
+	//* Creating User
 	_, insertDBErr := queries.CreateUser(ctx, db.CreateUserParams{
 		Name:     user.Name,
 		Email:    user.Email,
@@ -164,6 +162,7 @@ func Register(r *gin.Context) {
 		return
 	}
 
+	//* Sending OTP
 	go func() {
 		if sendEmailErr := model.SendOTP(user.Email, user.OTP); sendEmailErr != nil {
 			respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
@@ -183,7 +182,8 @@ func Register(r *gin.Context) {
 //	@Produce		json
 //	@Param			Body	body		model.OTP					true	"User's email address and otp"
 //	@Success		200		{object}	responses.UserResponse_doc	"Successful response, User already verified. Please login."
-//	@Failure		400		{object}	responses.ErrorResponse_doc	"Invalid JSON data, Invalid Email, User does not exist. Please register to generate OTP."
+//	@Failure		400		{object}	responses.ErrorResponse_doc	"Invalid JSON data, Invalid Email"
+//	@Failure		404		{object}	responses.ErrorResponse_doc	"User does not exist. Please register to generate OTP."
 //	@Failure		401		{object}	responses.ErrorResponse_doc	"Invalid OTP"
 //	@Failure		422		{object}	responses.ErrorResponse_doc	"Please provide with sufficient credentials"
 //	@Failure		500		{object}	responses.ErrorResponse_doc	"Internal Server Error"
@@ -208,8 +208,7 @@ func ValidateOTP(r *gin.Context) {
 	//* Checking whether user exists or not
 	user, getUserErr := queries.GetUserByEmail(ctx, req.Email)
 	if getUserErr != nil {
-		fmt.Println(getUserErr)
-		respondWithError(r, http.StatusBadRequest, "User does not exist. Please register to generate OTP.")
+		respondWithError(r, http.StatusNotFound, "User does not exist. Please register to generate OTP.")
 		return
 	}
 
@@ -230,7 +229,6 @@ func ValidateOTP(r *gin.Context) {
 	go func() {
 		updateUserErr = queries.UpdateUser(ctx, req.Email)
 		if updateUserErr != nil {
-			fmt.Println(updateUserErr)
 			respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
