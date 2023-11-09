@@ -2,6 +2,7 @@ package main
 
 import (
 	"Gin/Basics/configs"
+	controller "Gin/Basics/controllers"
 	docs "Gin/Basics/docs"
 	"Gin/Basics/routes"
 
@@ -32,6 +33,7 @@ func main() {
 	//* Connecting to DB
 	configs.ConnectDB()
 
+	router.GET("/", controller.BaseRoute)
 	router.GET("/api/v1/docs/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
-	router.Run("0.0.0.0:"+configs.PORT())
+	router.Run("0.0.0.0:" + configs.PORT())
 }
