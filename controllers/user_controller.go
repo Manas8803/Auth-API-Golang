@@ -35,7 +35,7 @@ var validate = validator.New()
 //	@Failure		500		{object}	responses.ErrorResponse_doc	"Internal server error"
 //	@Router			/auth/login [post]
 func Login(r *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	var req model.Login
 
@@ -53,14 +53,16 @@ func Login(r *gin.Context) {
 
 	queries := db.New(configs.CONN)
 	//* Checking whether the user is registered
-	user, err := queries.GetUserByEmail(ctx, req.Email)
-	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
+	user, userErr := queries.GetUserByEmail(ctx, req.Email)
+	if userErr != nil {
+		if strings.Contains(userErr.Error(), "no rows in result set") {
 			respondWithError(r, http.StatusNotFound, "User is not registered.")
 			return
 		}
-
-		respondWithError(r, http.StatusInternalServerError, "Internal server error")
+		go func() {
+			configs.NotifyAdmin(userErr)
+		}()
+		respondWithError(r, http.StatusInternalServerError, "Internal server error : "+userErr.Error())
 		return
 	}
 
@@ -81,10 +83,9 @@ func Login(r *gin.Context) {
 	}
 
 	//* Generating Token
-	var token string
-	token, err = auth.GenerateJWT()
-	if err != nil {
-		respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
+	token, genJWTErr := auth.GenerateJWT()
+	if genJWTErr != nil {
+		respondWithError(r, http.StatusInternalServerError, "Internal Server Error : "+genJWTErr.Error())
 		return
 	}
 
@@ -107,7 +108,7 @@ func Login(r *gin.Context) {
 //	@Failure		500		{object}	responses.ErrorResponse_doc	"Internal Server Error, Error in inserting the document"
 //	@Router			/auth/register [post]
 func Register(r *gin.Context) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	var user model.User
 	defer cancel()
 	var queries *db.Queries
@@ -129,13 +130,13 @@ func Register(r *gin.Context) {
 
 	//* Hashing Password
 	if hashPassErr := user.HashPassword(user.Password); hashPassErr != nil {
-		respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
+		respondWithError(r, http.StatusInternalServerError, "Internal Server Error : "+hashPassErr.Error())
 		return
 	}
 
 	//* Generating OTP
 	if genOtpErr := user.GenerateOTP(); genOtpErr != nil {
-		respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
+		respondWithError(r, http.StatusInternalServerError, "Internal Server Error : "+genOtpErr.Error())
 		return
 	}
 
@@ -149,7 +150,6 @@ func Register(r *gin.Context) {
 
 	//* Checking for errors while inserting in the DB
 	if insertDBErr != nil {
-		log.Println(insertDBErr)
 		if strings.HasPrefix(insertDBErr.Error(), "ERROR: duplicate key") {
 			respondWithError(r, http.StatusConflict, "User already exists")
 			return
@@ -158,7 +158,11 @@ func Register(r *gin.Context) {
 			return
 		}
 
-		respondWithError(r, http.StatusInternalServerError, "Error in inserting the document")
+		log.Println(insertDBErr)
+		go func() {
+			configs.NotifyAdmin(insertDBErr)
+		}()
+		respondWithError(r, http.StatusInternalServerError, insertDBErr.Error()+"  : Error in inserting the document")
 		return
 	}
 
