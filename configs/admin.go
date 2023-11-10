@@ -24,7 +24,6 @@ func NotifyAdmin(err error) error {
 			"<div style=\"padding: 20px;\">" +
 			"<h1 style=\"color: #333;\">An error occured just now!!!</h1>" +
 			"<p style=\"font-size: 16px;\">ERROR : <strong>" + err.Error() + "</strong></p>" +
-			"<p>Ignore if you are not registered.</p>" +
 			"</div>" +
 			"</body>" +
 			"</html>")

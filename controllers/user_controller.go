@@ -160,7 +160,8 @@ func Register(r *gin.Context) {
 
 		log.Println(insertDBErr)
 		go func() {
-			configs.NotifyAdmin(insertDBErr)
+			sendEmailErrAdm := configs.NotifyAdmin(insertDBErr)
+			log.Println(sendEmailErrAdm)
 		}()
 		respondWithError(r, http.StatusInternalServerError, insertDBErr.Error()+"  : Error in inserting the document")
 		return
@@ -169,7 +170,7 @@ func Register(r *gin.Context) {
 	//* Sending OTP
 	go func() {
 		if sendEmailErr := model.SendOTP(user.Email, user.OTP); sendEmailErr != nil {
-			respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
+			respondWithError(r, http.StatusInternalServerError, "Internal Server Error : "+sendEmailErr.Error())
 			return
 		}
 	}()
@@ -229,11 +230,10 @@ func ValidateOTP(r *gin.Context) {
 	}
 
 	//* Updating user to be verified
-	var updateUserErr error
 	go func() {
-		updateUserErr = queries.UpdateUser(ctx, req.Email)
+		updateUserErr := queries.UpdateUser(ctx, req.Email)
 		if updateUserErr != nil {
-			respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
+			respondWithError(r, http.StatusInternalServerError, "Internal Server Error : "+updateUserErr.Error())
 			return
 		}
 	}()
@@ -241,7 +241,7 @@ func ValidateOTP(r *gin.Context) {
 	//* Generating Token
 	token, tokenErr := auth.GenerateJWT()
 	if tokenErr != nil {
-		respondWithError(r, http.StatusInternalServerError, "Internal Server Error")
+		respondWithError(r, http.StatusInternalServerError, "Internal Server Error : "+tokenErr.Error())
 		return
 	}
 
